@@ -1,15 +1,24 @@
 from django.db import models
 
+from users.models import User
 
-# Create your models here.
+NULLABLE = {"blank": True, "null": True}
+
+
 class Category(models.Model):
+    """
+    Модель описывает категории товаров
+    """
+
     name = models.CharField(
         max_length=100,
-        verbose_name="Наименование",
-        help_text="Введите наименование категории",
+        verbose_name="Название категории",
+        help_text="Введите название категории товара",
     )
     description = models.TextField(
-        verbose_name="Описание", help_text="Введите описание категории"
+        verbose_name="Описание категории",
+        help_text="Введите описание категории товара",
+        **NULLABLE,
     )
 
     class Meta:
@@ -21,116 +30,84 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    """
+    Модель описывает товар
+    """
 
     name = models.CharField(
         max_length=100,
         verbose_name="Наименование",
-        help_text="Введите наименование продукта",
+        help_text="Введите наименование товара",
     )
-    description = models.TextField(
-        verbose_name="Описание", help_text="Введите описание продукта"
+    description = models.CharField(
+        max_length=100, verbose_name="Описание", help_text="Введите описание товара"
     )
     photo = models.ImageField(
-        upload_to="catalog/photo",
-        blank=True,
-        null=True,
-        verbose_name="Фото",
-        help_text="Загрузите фото продукта",
+        upload_to="product/photo",
+        verbose_name="Изображение",
+        help_text="Загрузите фото товара",
+        **NULLABLE,
     )
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
         verbose_name="Категория",
-        help_text="Введите категорию продукта",
-        null=True,
-        blank=True,
+        help_text="Введите категорию товара",
         related_name="products",
+        **NULLABLE,
     )
-    price = models.FloatField(verbose_name="Цена", help_text="Введите цену продукта")
+    price = models.FloatField(
+        verbose_name="Цена за покупку", help_text="Введите стоимость товара"
+    )
     created_at = models.DateField(
-        verbose_name="Дата создания", help_text="Введите дату создания продукта"
+        auto_now_add=True,
+        verbose_name="Дата создания",
+        help_text="Укажите дату записи в БД",
     )
     updated_at = models.DateField(
+        auto_now=True,
         verbose_name="Дата последнего изменения",
-        help_text="Введите дату последнего изменения продукта",
+        help_text="Укажите дату последнего изменения",
+    )
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        verbose_name="Владелец",
+        help_text="Введите владельца товара",
+        related_name="products",
         blank=True,
         null=True,
-    )
-    manufactured_at = models.DateField(
-        verbose_name="Дата производства продукта",
-        help_text="Введите дату производства продукта",
-        blank=True,
-        null=True,
-    )
-    views_counter = models.PositiveIntegerField(
-        verbose_name="Счетчик просмотров",
-        help_text="Укажите количество просмотров",
-        default=0,
     )
 
     class Meta:
-        verbose_name = "Продукт"
-        verbose_name_plural = "Продукты"
-        ordering = ["category", "name"]
+        verbose_name = "Товар"
+        verbose_name_plural = "Товары"
+        ordering = ["name", "category", "created_at", "updated_at"]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} {self.category}"
 
 
 class Version(models.Model):
-    product = models.ForeignKey(
-        Product,
-        related_name="versions",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="Версия",
-    )
+    """
+    Модель описывает версию товара
+    """
 
-    name = models.CharField(
-        max_length=100,
-        verbose_name="Наименование",
-        help_text="Введите наименование продукта",
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="товар")
+    number_of_version = models.FloatField(verbose_name="номер версии")
+    title = models.CharField(max_length=150, verbose_name="название версии")
+    is_actual = models.BooleanField(
+        default=False, verbose_name="признак текущей версии"
     )
-
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.SET_NULL,
-        verbose_name="Категория",
-        help_text="Введите категорию продукта",
-        null=True,
-        blank=True,
-        related_name="version_product",
-    )
-
-    version_num = models.PositiveIntegerField(
-        verbose_name="Номер версии",
-        help_text="Укажите номер версии продукта",
-        default=0,
-        null=True,
-        blank=True,
-    )
-
-    version_name = models.CharField(
-        max_length=100,
-        verbose_name="Наименование версии",
-        help_text="Введите наименование версии продукта",
-        default="",
-        null=True,
-        blank=True,
-    )
-
-    active = models.BooleanField(
-        verbose_name="Признак текущей версии",
-        help_text="Введите признак текущей версии продукта",
-        default=False
-    )
-
-    class Meta:
-        verbose_name = "Версия продукта"
-        verbose_name_plural = "Версии продукта"
-        ordering = ["category", "name"]
 
     def __str__(self):
-        return self.name
+        return f"{self.title}.версия {self.number_of_version}"
 
+    class Meta:
+        verbose_name = "Версия"
+        verbose_name_plural = "Версии"
+        ordering = (
+            "product",
+            "is_actual",
+        )
